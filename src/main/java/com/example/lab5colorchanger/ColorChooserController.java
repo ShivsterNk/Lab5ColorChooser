@@ -28,7 +28,7 @@ public class ColorChooserController {
     private int red = 0;
     private int green = 0;
     private int blue = 0;
-    private double alpha = 1.0;
+    private double alpha = 0;
 
     public void initialize() {
 
@@ -36,7 +36,33 @@ public class ColorChooserController {
         bindBidirectional(redSlider, redTextField, 0, 255);
         bindBidirectional(greenSlider, greenTextField, 0, 255);
         bindBidirectional(blueSlider, blueTextField, 0, 255);
-        bindBidirectional(alphaSlider, alphaTextField, 0, 1);
+
+        alphaSlider.setMin(0);
+        alphaSlider.setMax(1);
+        alphaSlider.setBlockIncrement(0.01);
+        alphaSlider.setMajorTickUnit(0.1);
+        alphaSlider.setMinorTickCount(9);
+        alphaSlider.setSnapToTicks(false);
+
+        // Sync alpha slider -> textfield
+        alphaSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            alphaTextField.setText(String.format("%.2f", newVal.doubleValue()));
+        });
+
+        // Sync alpha textfield -> slider only on focus lost (when user finishes typing)
+        alphaTextField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (!isFocused) {
+                try {
+                    double val = Double.parseDouble(alphaTextField.getText());
+                    if (val < 0) val = 0;
+                    if (val > 1) val = 1;
+                    alphaSlider.setValue(val);
+                } catch (NumberFormatException e) {
+                    // Invalid input: reset to current slider value
+                    alphaTextField.setText(String.format("%.2f", alphaSlider.getValue()));
+                }
+            }
+        });
 
         // Add listeners to sliders to update colors
         redSlider.valueProperty().addListener((ObservableValue, oldValue, newValue) -> updateColor());
@@ -57,10 +83,10 @@ public class ColorChooserController {
         if (max == 255) {
             textField.setText(String.valueOf((int) slider.getValue()));
         }else {
-            textField.setText(String.format("%2f", slider.getValue()));
+            textField.setText(String.format("%.2f", slider.getValue()));
         }
 
-        slider.valueProperty().addListener((observableValue, oldValue, newValue) -> {
+        slider.valueProperty().addListener((ObservableValue, oldValue, newValue) -> {
             if (max == 255) {
                 textField.setText(String.valueOf(newValue.intValue()));
             }else {
@@ -69,28 +95,19 @@ public class ColorChooserController {
         });
 
         //TextField -> Slider
-        textField.textProperty().addListener(((observableValue, oldText, newText) -> {
-            try {
-                double val;
-                if (max == 255) {
-                    val = Integer.parseInt(newText);
-                } else {
-                    val = Double.parseDouble(newText);
+        // For RGB sliders only: update slider on TextField change
+        if (max == 255) {
+            textField.textProperty().addListener((obs, oldText, newText) -> {
+                try {
+                    int val = Integer.parseInt(newText);
+                    if (val < min) val = (int) min;
+                    if (val > max) val = (int) max;
+                    if (slider.getValue() != val) slider.setValue(val);
+                } catch (NumberFormatException ignored) {
+                    // Invalid input ignored
                 }
-
-                if (val < min)
-                    val = min;
-                if (val > max)
-                    val = max;
-
-                if (slider.getValue() != val) {
-                    slider.setValue(val);
-                }
-            } catch (NumberFormatException e) {
-                //Invalid input
-            }
-
-        }));
+            });
+        }
     }
 
     public void updateColor() {
