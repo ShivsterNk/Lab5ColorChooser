@@ -57,7 +57,7 @@ public class ColorChooserController {
         if (max == 255) {
             textField.setText(String.valueOf((int) slider.getValue()));
         }else {
-            textField.setText(String.format("%2f", slider.getValue()));
+            textField.setText(String.format("%.2f", slider.getValue()));
         }
 
         slider.valueProperty().addListener((observableValue, oldValue, newValue) -> {
